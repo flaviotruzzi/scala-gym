@@ -1,0 +1,3 @@
+[submodule "src/main/resources/gym-server"]
+	path = src/main/resources/gym-server
+	url = git@github.com:flaviotruzzi/gym-server.git
