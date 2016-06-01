@@ -4,6 +4,7 @@ import akka.actor.{Actor, ActorLogging}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpRequest
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
+import gym.Action
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -25,7 +26,7 @@ trait GymClient extends Actor with ActorLogging with JsonSupport {
     self ! Initialize
   }
 
-  protected def sendAction(action: Int): Future[StepResponse] = http
+  protected def sendAction(action: Action): Future[StepResponse] = http
     .singleRequest(HttpRequest(uri = gymServer.actEndpoint(action)))
     .flatMap(r => r.entity.toStrict(timeout))
     .map(_.data.decodeString("UTF-8").parseJson.convertTo[StepResponse])

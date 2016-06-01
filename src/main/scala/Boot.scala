@@ -1,7 +1,8 @@
-import akka.actor.{ActorSystem, Props}
-import gym.{GymAgent, GymServer, StepResponse}
+import agents.QLearningAgent
+import akka.actor.ActorSystem
+import gym.GymServer
 
-import scala.concurrent.{Future, blocking}
+import scala.concurrent.blocking
 
 object Boot extends App with GymServer {
   self =>
@@ -10,22 +11,12 @@ object Boot extends App with GymServer {
 
   val system = ActorSystem("mySystem")
 
-
   initialize()
-  val actor = system.actorOf(Props[RLActor])
-
-  class RLActor extends GymAgent {
-    override val gymServer: GymServer = Boot.this
-
-    override def updateState(observation: StepResponse): Future[_] = Future.successful()
-
-    override def chooseAction(): Int = 0
-  }
 
   blocking {
     Thread.sleep(5000)
-    destroy()
-    
   }
+
+  system.actorOf(QLearningAgent.props(this, List(0, 1), 0.05, 1, 0.2))
 
 }

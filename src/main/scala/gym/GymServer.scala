@@ -5,6 +5,7 @@ import java.util
 import com.spotify.docker.client.DefaultDockerClient
 import com.spotify.docker.client.messages.{ContainerConfig, HostConfig, PortBinding}
 import com.typesafe.scalalogging.LazyLogging
+import gym.Action
 
 
 trait GymServer extends LazyLogging {

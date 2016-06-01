@@ -1,8 +1,7 @@
 package gym
 
 import akka.actor.{Actor, ActorLogging}
-
-import scala.concurrent.Future
+import gym._
 
 trait GymAgent extends Actor with GymClient with ActorLogging {
 
@@ -12,25 +11,32 @@ trait GymAgent extends Actor with GymClient with ActorLogging {
   private var episodes: Int = 0
   private var timesteps: Int = 0
 
-  def updateState(observation: StepResponse): Future[_]
+  def updateState(observation: StepResponse, lastState: Option[State], action: Option[Action]): Unit
 
-  def chooseAction(): Int
+  def chooseAction(state: State): Action
+
+  implicit def toState: StepResponse => State
 
   def receive = {
-    case Update(observation) =>
-
-      updateState(observation).map { f =>
-        if (observation.done) {
+    case Update(observation, lastState, lastAction) =>
+      observation.done match {
+        case true =>
+          updateState(observation.copy(reward = -200), lastState, lastAction)
           self ! EndOfEpisode
-        } else {
-          timesteps += 1
-          self ! Act
-        }
+        case false =>
+          updateState(observation, lastState, lastAction)
+
+          self ! Act(observation)
       }
 
-    case Act =>
-      val action = chooseAction()
-      sendAction(action).map(Update).pipeTo(self)
+    case Act(state) =>
+      if (timesteps > 200)
+        self ! EndOfEpisode
+
+      timesteps += 1
+
+      val action = chooseAction(state)
+      sendAction(action).map(stepResponse => Update(stepResponse, Option(state), Option(action))).pipeTo(self)
 
     case EndOfEpisode =>
       episodes += 1
@@ -41,7 +47,7 @@ trait GymAgent extends Actor with GymClient with ActorLogging {
 
     case Initialize =>
       timesteps = 0
-      initialize().map(Update).pipeTo(self)
+      initialize().map(s => Update(s, None, None)).pipeTo(self)
   }
 
 }
