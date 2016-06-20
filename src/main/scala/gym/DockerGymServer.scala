@@ -8,11 +8,10 @@ import com.typesafe.scalalogging.LazyLogging
 import gym.Action
 
 
-trait GymServer extends LazyLogging {
+trait DockerGymServer extends LazyLogging {
 
   import scala.collection.JavaConversions._
 
-  lazy val env = Seq(s"GYM_ENV=$environment")
   val docker: DefaultDockerClient = DefaultDockerClient.fromEnv().build()
   val environment: String
   val image = "flaviotruzzi/gym-server:latest"
@@ -26,18 +25,17 @@ trait GymServer extends LazyLogging {
 
     val bindings: util.Map[String, util.List[PortBinding]] = Map(port -> binding)
 
-    logger.info("Building Host Configuration")
+    logger.debug("Building Host Configuration")
     val hostConfig = HostConfig
       .builder()
       .portBindings(bindings)
       .build()
 
-    logger.info(s"Building Container Configuration with env: $env")
+    logger.debug(s"Building Container Configuration")
     val containerConfig = ContainerConfig
       .builder()
       .hostConfig(hostConfig)
       .image(image)
-      .env(env: _*)
       .exposedPorts(port)
       .build()
 
@@ -52,10 +50,10 @@ trait GymServer extends LazyLogging {
 
   def destroy() = {
     if (!id.isEmpty) {
-      logger.info(s"Stopping container $id")
+      logger.debug(s"Stopping container $id")
       docker.stopContainer(id, 5)
 
-      logger.info(s"Removing container $id")
+      logger.debug(s"Removing container $id")
       docker.removeContainer(id)
     }
   }
