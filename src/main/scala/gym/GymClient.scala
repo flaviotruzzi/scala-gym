@@ -16,13 +16,14 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-trait GymClient extends Actor with ActorLogging with JsonSupport with GymEndPointsV1 {
+trait GymClient extends Actor with GymEndPointsV1 with ActorLogging with JsonSupport {
 
   import context.dispatcher
   import spray.json._
 
   lazy val connectionFlow: Flow[HttpRequest, HttpResponse, Any] =
     http.outgoingConnection(gymServer.docker.getHost, gymServer.port.toInt)
+
   val gymServer: DockerGymServer
   val environment: String
   val render: Boolean
@@ -61,8 +62,6 @@ trait GymClient extends Actor with ActorLogging with JsonSupport with GymEndPoin
     }
   }
 
-  def mkEntity(json: JsValue) = HttpEntity(ContentTypes.`application/json`, json.toString())
-
   def monitorStart(force: Boolean, resume: Boolean): Future[Boolean] = {
     mkRequest(RequestBuilding.Post(v1.monitorStart(instanceId), mkEntity(MonitorStartRequest(force, resume).toJson))).flatMap { response =>
       response.status match {
@@ -74,6 +73,11 @@ trait GymClient extends Actor with ActorLogging with JsonSupport with GymEndPoin
     }
   }
 
+  def mkEntity(json: JsValue) = HttpEntity(ContentTypes.`application/json`, json.toString())
+
+  def mkRequest(request: HttpRequest): Future[HttpResponse] =
+    Source.single(request).via(connectionFlow).runWith(Sink.head)
+
   def monitorStop(): Future[Boolean] = {
     mkRequest(RequestBuilding.Post(v1.monitorStop(instanceId))).flatMap { response =>
       response.status match {
@@ -84,9 +88,6 @@ trait GymClient extends Actor with ActorLogging with JsonSupport with GymEndPoin
       }
     }
   }
-
-  def mkRequest(request: HttpRequest): Future[HttpResponse] =
-    Source.single(request).via(connectionFlow).runWith(Sink.head)
 
   def upload(algorithmId: String, writeup: String, apiKey: String, ignoreOpenMonitors: Boolean) = {
     mkRequest(RequestBuilding.Post(v1.upload(instanceId), mkEntity(UploadRequest(algorithmId, writeup, apiKey, ignoreOpenMonitors).toJson))).flatMap { response =>

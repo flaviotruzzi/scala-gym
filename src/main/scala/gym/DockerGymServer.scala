@@ -58,8 +58,4 @@ trait DockerGymServer extends LazyLogging {
     }
   }
 
-  def infoEndPoint() = s"http://${docker.getHost}:$port/info"
-  def actEndpoint(action: Int) = s"http://${docker.getHost}:$port/step/$action"
-  def resetEndpoint() = s"http://${docker.getHost}:$port/reset"
-
 }

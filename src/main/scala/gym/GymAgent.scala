@@ -11,13 +11,13 @@ trait GymAgent extends Actor with GymClient with ActorLogging {
   private var episodes: Int = 0
   private var timesteps: Int = 0
 
-  def updateState(observation: StepResponse, lastState: Option[State], action: Option[Action]): Unit
+  def updateState(observation: ActionResponse, lastState: Option[State], action: Option[Action]): Unit
 
   def chooseAction(state: State): Action
 
-  implicit def toState: StepResponse => State
+  implicit def toState: ActionResponse => State
 
-  def receive = {
+  override def receive = {
     case Update(observation, lastState, lastAction) =>
       observation.done match {
         case true =>
@@ -30,13 +30,14 @@ trait GymAgent extends Actor with GymClient with ActorLogging {
       }
 
     case Act(state) =>
-      if (timesteps > 200)
+      if (timesteps >= 200)
         self ! EndOfEpisode
+      else {
+        timesteps += 1
 
-      timesteps += 1
-
-      val action = chooseAction(state)
-      sendAction(action).map(stepResponse => Update(stepResponse, Option(state), Option(action))).pipeTo(self)
+        val action = chooseAction(state)
+        step(action).map(actionResponse => Update(actionResponse, Option(state), Option(action))).pipeTo(self)
+      }
 
     case EndOfEpisode =>
       episodes += 1
@@ -46,6 +47,7 @@ trait GymAgent extends Actor with GymClient with ActorLogging {
       self ! Initialize
 
     case Initialize =>
+      log.info("Initializing!")
       timesteps = 0
       initialize().map(s => Update(s, None, None)).pipeTo(self)
   }

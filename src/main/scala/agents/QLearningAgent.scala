@@ -2,20 +2,23 @@ package agents
 
 import akka.actor.Props
 import gym.gym.{Action, State}
-import gym.{GymAgent, GymServer, StepResponse}
+import gym.{GymAgent, DockerGymServer, ActionResponse}
 
+import scala.collection.mutable
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-class QLearningAgent(override val gymServer: GymServer,
+class QLearningAgent(val gymServer: DockerGymServer,
+                     val environment: String,
+                     val render: Boolean,
                      override val actionSpace: List[Action],
                      override val epsilon: Double,
                      val discount: Double,
                      val alpha: Double) extends GymAgent with EpsilonGreedy with CartPoleState {
 
-  private var qFunction: Map[(State, Action), Double] = Map.empty
+  private val qFunction: mutable.Map[(State, Action), Double] = mutable.Map.empty
 
-  override def updateState(observation: StepResponse, lastState: Option[State], action: Option[Action]): Unit = Future.successful {
+  override def updateState(observation: ActionResponse, lastState: Option[State], action: Option[Action]): Unit = Future.successful {
     val newState = toState(observation)
     import observation._
 
@@ -28,15 +31,17 @@ class QLearningAgent(override val gymServer: GymServer,
       ))
 
     }
+
   }
 
   override def Q: (State, Action) => Double =
     (state, action) => qFunction.getOrElse((state, action), 1.0)
+
 }
 
 object QLearningAgent {
-  def props(gymServer: GymServer, actionSpace: List[Action], epsilon: Double, discount: Double, alpha: Double) =
-    Props(classOf[QLearningAgent], gymServer, actionSpace, epsilon, discount, alpha)
+  def props(gymServer: DockerGymServer, actionSpace: List[Action], render: Boolean, epsilon: Double, discount: Double, alpha: Double) =
+    Props(classOf[QLearningAgent], gymServer, "CartPole-v0", render, actionSpace, epsilon, discount, alpha)
 }
 
 
@@ -53,7 +58,7 @@ trait CartPoleState {
     init to end by ((end - init) / (slices - 1))
   }.toList
 
-  implicit def toState: (StepResponse => State) = { stepResponse =>
+  implicit def toState: (ActionResponse => State) = { stepResponse =>
      val state = stepResponse
       .observation
       .zipWithIndex
