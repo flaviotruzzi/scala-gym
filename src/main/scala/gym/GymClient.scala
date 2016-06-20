@@ -36,7 +36,6 @@ trait GymClient extends Actor with GymEndPointsV1 with ActorLogging with JsonSup
   override def preStart() = {
     create(environment).map { env =>
       instanceId = env.instance_id
-      self ! Initialize
     }
   }
 

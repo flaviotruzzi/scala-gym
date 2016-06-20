@@ -1,10 +1,8 @@
-import agents.QLearningAgent
+import agents.policy.QLearningAgent
 import akka.actor.ActorSystem
-import gym.GymServer
+import gym.{Initialize, DockerGymServer}
 
-import scala.concurrent.blocking
-
-object Boot extends App with GymServer {
+object Boot extends App with DockerGymServer {
   self =>
 
   override val environment: String = "CartPole-v0"
@@ -13,10 +11,14 @@ object Boot extends App with GymServer {
 
   initialize()
 
-  blocking {
-    Thread.sleep(5000)
-  }
+  val actor = system.actorOf(QLearningAgent.props(
+    discount = 0.9,
+    alpha = 0.2,
+    epsilon = 0.05,
+    actionSpace = List(0, 1),
+    render = false,
+    gymServer = this))
 
-  system.actorOf(QLearningAgent.props(this, List(0, 1), 0.05, 1, 0.2))
 
+  actor ! Initialize
 }
